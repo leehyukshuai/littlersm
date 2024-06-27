@@ -92,7 +92,7 @@ namespace rsm {
 
         void render() {
             glEnable(GL_DEPTH_TEST);
-            // glEnable(GL_CULL_FACE);
+            glEnable(GL_CULL_FACE);
 
             // 1. first render to depth cubemap
             // ConfigureShaderAndMatrices
@@ -126,7 +126,7 @@ namespace rsm {
             // 2. then render scene as normal with shadow mapping (using depth cubemap)
             glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glClearColor(0.0, 0.2, 0.2, 1.0);
+            glClearColor(0.0, 0.0, 0.0, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             // ConfigureShaderAndMatrices
             auto viewTransform       = _camera.getViewMatrix();
