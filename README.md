@@ -9,7 +9,7 @@
    1. 支持**单个点光源**产生的阴影效果
    2. 可以通过glTF任意**导入模型**
    3. 支持qweasd键**移动相机**和鼠标拖拽
-   ![screenshot](data\images\screenshot_1.png)
+   ![screenshot](data/images/screenshot_1.png)
 
 ## TODOs
 
