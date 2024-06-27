@@ -4,32 +4,16 @@
 #include "../common/shader.hpp"
 #include "../common/texture.hpp"
 #include "app.h"
-#include "mesh.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
+// FOR DEBUGGING
 #include <iostream>
+#include <stb_image_write.h>
 
 namespace rsm {
-    // class FrameBuffer {
-    // public:
-    //     FrameBuffer() {
-    //         glGenFramebuffers(1, &_id);
-    //     }
-    //     ~FrameBuffer() {
-    //         glDeleteFramebuffers(1, &_id);
-    //     }
-
-    //     GLuint get() const {
-    //         return _id;
-    //     }
-
-    // private:
-    //     GLuint _id {};
-    // };
-
     class RSMApp final : public App {
     public:
         RSMApp():
@@ -41,34 +25,60 @@ namespace rsm {
             _camera.jump(glm::vec3(0, 0, 0), viewSphere);
             _camera.moveSpeed = 4.0f;
         }
+        ~RSMApp() {
+            glDeleteFramebuffers(1, &_shadowDepthFbo);
+        }
 
     private:
-        // const unsigned               SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-        // std::unique_ptr<Texture2D>   _shadowDepthMap;
-        // std::unique_ptr<FrameBuffer> _shadowDepthFbo;
-        // std::unique_ptr<Program>     _simpleDepthShader;
+        const unsigned SCR_WIDTH = 1600, SCR_HEIGHT = 1200;
+        const unsigned SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
-        std::unique_ptr<Gltf>    _scene;
-        std::unique_ptr<Program> _program;
-        bool                     _disableControl { false };
+        std::unique_ptr<Gltf> _scene;
+
+        glm::vec3 _pointLightColor { 1, 1, 1 };
+        glm::vec3 _pointLightPosition { 278, 548, 279.5 };
+
+        std::unique_ptr<Program> _program, _depthProgram;
+
+        GLuint _shadowDepthFbo, _shadowDepthMap;
+
+        bool _disableControl { false };
 
     private:
         void init() override {
-            // _shadowDepthFbo = std::make_unique<FrameBuffer>();
-            // _shadowDepthMap = std::make_unique<Texture2D>(nullptr, GL_FLOAT, SHADOW_WIDTH, SHADOW_HEIGHT, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
+            glGenFramebuffers(1, &_shadowDepthFbo);
+            glGenTextures(1, &_shadowDepthMap);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, _shadowDepthMap);
+            for (GLuint i = 0; i < 6; ++i)
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+            glBindFramebuffer(GL_FRAMEBUFFER, _shadowDepthFbo);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _shadowDepthMap, 0);
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+                std::cerr << "Error: Framebuffer is not complete!" << std::endl;
+                exit(1);
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            // glBindFramebuffer(GL_FRAMEBUFFER, _shadowDepthFbo->get());
-            // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, _shadowDepthMap->get(), 0);
-            // glDrawBuffer(GL_NONE);
-            // glReadBuffer(GL_NONE);
-            // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            _scene   = std::make_unique<Gltf>("cornell_box/scene.gltf");
+            _scene = std::make_unique<Gltf>("cornell_box/scene.gltf");
             // _scene   = std::make_unique<Gltf>("FlightHelmet/FlightHelmet.gltf");
-            _program = Program::create_from_files("shaders/naive.vert", "shaders/naive.frag");
+            _program      = Program::create_from_files("shaders/shadow.vert", "shaders/shadow.frag");
+            _depthProgram = Program::create_from_files("shaders/depth.vert", "shaders/depth.geom", "shaders/depth.frag");
         }
 
         void update() override {
-            _camera.update(getDelta(), _window);
+            App::update();
+            drawui();
+            render();
+        }
+
+        void drawui() {
             if (ImGui::CollapsingHeader("Lighting", ImGuiTreeNodeFlags_DefaultOpen)) {
             }
             if (ImGui::Checkbox("Disable Camera Control", &_disableControl))
@@ -79,80 +89,71 @@ namespace rsm {
                     "2. Drag screen to rotate your front.\n"
                     "3. Disable `Camera Control` to set uniforms without moving your camera.");
             }
-            draw();
         }
 
-        void draw() {
+        void render() {
             glEnable(GL_DEPTH_TEST);
-            glClearColor(0.0, 0.0, 0.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // glEnable(GL_CULL_FACE);
+            // 1. first render to depth cubemap
+            // ConfigureShaderAndMatrices
+            GLfloat                aspect     = (GLfloat) SHADOW_WIDTH / (GLfloat) SHADOW_HEIGHT;
+            GLfloat                near       = 0.1f;
+            GLfloat                far        = 1000.0f;
+            glm::mat4              shadowProj = glm::perspective(90.0f, aspect, near, far);
+            std::vector<glm::mat4> shadowTransforms;
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+            // RenderScene
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, _shadowDepthFbo);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glUseProgram(_depthProgram->get());
+            for (GLuint i = 0; i < 6; ++i)
+                glUniformMatrix4fv(glGetUniformLocation(_depthProgram->get(), ("shadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
+            glUniform1f(glGetUniformLocation(_depthProgram->get(), "far_plane"), far);
+            glUniform3fv(glGetUniformLocation(_depthProgram->get(), "lightPos"), 1, glm::value_ptr(_pointLightPosition));
+            for (auto & draw : _scene->draws) {
+                glUniformMatrix4fv(glGetUniformLocation(_depthProgram->get(), "model"), 1, GL_FALSE, glm::value_ptr(draw.transform));
+                for (auto & prim : _scene->meshes[draw.index]) {
+                    prim.mesh->draw();
+                }
+            }
 
+            // 2. then render scene as normal with shadow mapping (using depth cubemap)
+            glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClearColor(0.0, 0.2, 0.2, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // ConfigureShaderAndMatrices
             auto viewTransform       = _camera.getViewMatrix();
             auto projectionTransform = _camera.getProjectionMatrix(getAspect());
-            auto cameraTransform     = projectionTransform * viewTransform;
-
-            // /// Update shadow depth map
-            // glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            // glBindFramebuffer(GL_FRAMEBUFFER, _shadowDepthFbo->get());
-            // glClear(GL_DEPTH_BUFFER_BIT);
-            // // Configure shader and matrices
-            // GLfloat   near_plane = 0.1f, far_plane = 100.0f;
-            // glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-            // glm::mat4 lightView       = glm::lookAt(_directLightDirection, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            // glm::mat4 lightTransform  = lightProjection * lightView;
-            // glUseProgram(_simpleDepthShader->get());
-            // glUniformMatrix4fv(glGetUniformLocation(_program->get(), "u_lightTransform"), 1, GL_FALSE, glm::value_ptr(lightTransform));
-            // glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            // glBindFramebuffer(GL_FRAMEBUFFER, _shadowDepthFbo->get());
-            // glClear(GL_DEPTH_BUFFER_BIT);
-            // // Render scene
-            // glBindVertexArray(_vao->get());
-            // glDrawElements(GL_TRIANGLES, _square.indices.size(), GL_UNSIGNED_INT, 0);
-
-            // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            // // Bind shadow map
-            // //Render as default
-
+            // RenderScene
             glUseProgram(_program->get());
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, _shadowDepthMap);
+            glUniform1i(glGetUniformLocation(_program->get(), "depthMap"), 0);
+            glUniformMatrix4fv(glGetUniformLocation(_program->get(), "projection"), 1, false, glm::value_ptr(projectionTransform));
+            glUniformMatrix4fv(glGetUniformLocation(_program->get(), "view"), 1, false, glm::value_ptr(viewTransform));
+            glUniform3fv(glGetUniformLocation(_program->get(), "lightPos"), 1, glm::value_ptr(_pointLightPosition));
+            glUniform3fv(glGetUniformLocation(_program->get(), "viewPos"), 1, glm::value_ptr(_camera.getPosition()));
+            glUniform1f(glGetUniformLocation(_program->get(), "far_plane"), far);
             for (auto & draw : _scene->draws) {
-                auto transform = projectionTransform * viewTransform * draw.transform;
-                glUniformMatrix4fv(glGetUniformLocation(_program->get(), "transform"), 1, false, (GLfloat *) &transform);
+                glUniformMatrix4fv(glGetUniformLocation(_program->get(), "model"), 1, false, glm::value_ptr(draw.transform));
                 for (auto & prim : _scene->meshes[draw.index]) {
                     auto mat      = _scene->materials[prim.material].get();
                     auto base_tex = _scene->textures[mat->base_color].get();
-                    glActiveTexture(GL_TEXTURE0);
+                    glActiveTexture(GL_TEXTURE1);
                     glBindTexture(GL_TEXTURE_2D, base_tex->get());
-                    glUniform1i(glGetUniformLocation(_program->get(), "base_color"), 0);
+                    glUniform1i(glGetUniformLocation(_program->get(), "base_color"), 1);
                     glUniform1i(glGetUniformLocation(_program->get(), "use_base_color"), mat->base_color != 0);
                     glUniform4fv(glGetUniformLocation(_program->get(), "base_color_factor"), 1, glm::value_ptr(mat->base_color_factor));
                     prim.mesh->draw();
                 }
             }
-
-            // glUniformMatrix4fv(glGetUniformLocation(_program->get(), "u_transform"), 1, false, glm::value_ptr(cameraTransform));
-            // glUniform3fv(glGetUniformLocation(_program->get(), "u_directLightColor"), 1, glm::value_ptr(_directLightColor));
-            // glUniform3fv(glGetUniformLocation(_program->get(), "u_directLightDirection"), 1, glm::value_ptr(_directLightDirection));
-            // glUniform1f(glGetUniformLocation(_program->get(), "u_directLightIntensity"), _directLightIntensity);
-            // glUniform3fv(glGetUniformLocation(_program->get(), "u_pointLightColor"), 1, glm::value_ptr(_pointLightColor));
-            // glUniform3fv(glGetUniformLocation(_program->get(), "u_pointLightPosition"), 1, glm::value_ptr(_pointLightPosition));
-            // glUniform1f(glGetUniformLocation(_program->get(), "u_pointLightIntensity"), _pointLightIntensity);
-            // glUniform1i(glGetUniformLocation(_program->get(), "u_attenuationOrder"), _attenuationOrder);
-            // glUniform1f(glGetUniformLocation(_program->get(), "u_ambientScale"), _ambientScale);
-            // glUniform1f(glGetUniformLocation(_program->get(), "u_specularScale"), _specularScale);
-            // glUniform1i(glGetUniformLocation(_program->get(), "u_useNormalMap"), int(_useNormalMap));
-            // glUniform1f(glGetUniformLocation(_program->get(), "u_shininess"), _shininess);
-            // glUniform3fv(glGetUniformLocation(_program->get(), "u_eyePos"), 1, glm::value_ptr(_camera.getPosition()));
-            // glUniform1i(glGetUniformLocation(_program->get(), "u_diffuseMap"), 0);
-            // glUniform1i(glGetUniformLocation(_program->get(), "u_normalMap"), 1);
-            // glBindVertexArray(_vao->get());
-            // glDrawElements(GL_TRIANGLES, _square.indices.size(), GL_UNSIGNED_INT, 0);
-
-            // glUseProgram(_flatProgram->get());
-            // glUniformMatrix4fv(glGetUniformLocation(_flatProgram->get(), "u_transform"), 1, false, glm::value_ptr(cameraTransform));
-            // glUniformMatrix4fv(glGetUniformLocation(_flatProgram->get(), "u_translate"), 1, false, glm::value_ptr(bulbTransform));
-            // glUniform3fv(glGetUniformLocation(_flatProgram->get(), "u_color"), 1, glm::value_ptr(_pointLightColor));
-            // glBindVertexArray(_flatVao->get());
-            // glDrawElements(GL_TRIANGLES, _sphere.indices.size(), GL_UNSIGNED_INT, 0);
         }
     };
 }; // namespace rsm

@@ -12,11 +12,12 @@ public:
     App(const char * name, int width, int height):
         Application(name, width, height) {}
 
-private:
+public:
     void update() override {
         _camera.update(getDelta(), _window);
     }
-
+    
+private:
     void cursor_position_callback(double xpos, double ypos) override {
         if (_left_button_pressed) {
             float dx   = xpos - _last_xpos;

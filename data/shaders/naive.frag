@@ -9,5 +9,6 @@ uniform vec4 base_color_factor;
 layout(location = 0) out vec4 frag_color;
 
 void main() {
-  frag_color = use_base_color ? vec4(texture(base_color, uv_fs).rgb, 1.0) : base_color_factor;
+  vec3 flat_color = use_base_color ? texture(base_color, uv_fs).rgb : base_color_factor.rgb;
+  frag_color = flat_color;
 }

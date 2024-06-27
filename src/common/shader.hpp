@@ -24,6 +24,9 @@ public:
                                                      const char *frag_source);
   static std::unique_ptr<Program> create_from_files(const fs::path &vert_file,
                                                     const fs::path &frag_file);
+  static std::unique_ptr<Program> create_from_files(const fs::path &vert_file,
+                                                    const fs::path &geom_file,
+                                                    const fs::path &frag_file);
 
   GLuint get() const;
 

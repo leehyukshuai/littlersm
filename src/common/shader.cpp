@@ -102,3 +102,12 @@ std::unique_ptr<Program> Program::create_from_files(const fs::path &vert_file,
 
   return std::make_unique<Program>(shaders, 2);
 }
+
+std::unique_ptr<Program> Program::create_from_files(const fs::path & vert_file, const fs::path & geom_file, const fs::path & frag_file) {
+  auto vert_shader = std::make_unique<Shader>(vert_file, GL_VERTEX_SHADER);
+  auto geom_shader = std::make_unique<Shader>(geom_file, GL_GEOMETRY_SHADER);
+  auto frag_shader = std::make_unique<Shader>(frag_file, GL_FRAGMENT_SHADER);
+  GLuint shaders[] = {vert_shader->get(), geom_shader->get(), frag_shader->get()};
+
+  return std::make_unique<Program>(shaders, 3);
+}
