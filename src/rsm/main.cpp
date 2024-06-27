@@ -66,7 +66,7 @@ namespace rsm {
 
             _scene = std::make_unique<Gltf>("cornell_box/scene.gltf");
             // _scene   = std::make_unique<Gltf>("FlightHelmet/FlightHelmet.gltf");
-            _program      = Program::create_from_files("shaders/shadow.vert", "shaders/shadow.frag");
+            _program      = Program::create_from_files("shaders/shadow.vert", "shaders/rsm_phase2.frag");
             _depthProgram = Program::create_from_files("shaders/depth.vert", "shaders/depth.geom", "shaders/depth.frag");
         }
 
@@ -138,6 +138,7 @@ namespace rsm {
             glUniformMatrix4fv(glGetUniformLocation(_program->get(), "projection"), 1, false, glm::value_ptr(projectionTransform));
             glUniformMatrix4fv(glGetUniformLocation(_program->get(), "view"), 1, false, glm::value_ptr(viewTransform));
             glUniform3fv(glGetUniformLocation(_program->get(), "lightPos"), 1, glm::value_ptr(_pointLightPosition));
+            glUniform3fv(glGetUniformLocation(_program->get(), "lightColor"), 1, glm::value_ptr(_pointLightColor));
             glUniform3fv(glGetUniformLocation(_program->get(), "viewPos"), 1, glm::value_ptr(_camera.getPosition()));
             glUniform1f(glGetUniformLocation(_program->get(), "far_plane"), far);
             for (auto & draw : _scene->draws) {
