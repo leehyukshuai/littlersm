@@ -4,6 +4,4 @@
 build
 out
 third_party
-cmake-build-debug
-cmake-build-release
 .DS_Store
