@@ -19,11 +19,10 @@ namespace rsm {
         RSMApp():
             App("Texture and Lighting", 1600, 1200) {
             camera::Sphere viewSphere;
-            viewSphere.radius = 4.0f;
-            viewSphere.phi    = PI / 3.6f;
-            viewSphere.theta  = 0.3f;
-            _camera.jump(glm::vec3(0, 0, 0), viewSphere);
-            _camera.moveSpeed = 4.0f;
+            viewSphere.radius = 5.0f;
+            viewSphere.theta = PI/2.0f;
+            _camera.jump(glm::vec3(0, 1, 0), viewSphere);
+            _camera.moveSpeed = 1.0f;
         }
         ~RSMApp() {
             glDeleteFramebuffers(1, &_shadowDepthFbo);
@@ -36,7 +35,7 @@ namespace rsm {
         std::unique_ptr<Gltf> _scene;
 
         glm::vec3 _pointLightColor { 1, 1, 1 };
-        glm::vec3 _pointLightPosition { 278, 548, 279.5 };
+        glm::vec3 _pointLightPosition { 0, 1.8, 0 };
 
         std::unique_ptr<Program> _program, _depthProgram;
 
@@ -99,7 +98,7 @@ namespace rsm {
             // ConfigureShaderAndMatrices
             GLfloat                aspect     = (GLfloat) SHADOW_WIDTH / (GLfloat) SHADOW_HEIGHT;
             GLfloat                near       = 0.1f;
-            GLfloat                far        = 1000.0f;
+            GLfloat                far        = 500.0f;
             glm::mat4              shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
             std::vector<glm::mat4> shadowTransforms;
             shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
@@ -143,7 +142,7 @@ namespace rsm {
             glUniform3fv(glGetUniformLocation(_program->get(), "viewPos"), 1, glm::value_ptr(_camera.getPosition()));
             glUniform1f(glGetUniformLocation(_program->get(), "far_plane"), far);
             for (auto & draw : _scene->draws) {
-                glUniformMatrix4fv(glGetUniformLocation(_program->get(), "model"), 1, false, glm::value_ptr(draw.transform));
+                glUniformMatrix4fv(glGetUniformLocation(_program->get(), "model"), 1, GL_FALSE, glm::value_ptr(draw.transform));
                 for (auto & prim : _scene->meshes[draw.index]) {
                     auto mat      = _scene->materials[prim.material].get();
                     auto base_tex = _scene->textures[mat->base_color].get();
