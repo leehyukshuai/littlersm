@@ -1,7 +1,5 @@
 .idea
 .vs
 .vscode
-build
-out
-third_party
 .DS_Store
+build
