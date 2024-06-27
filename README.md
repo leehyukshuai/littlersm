@@ -13,6 +13,5 @@
 
 ## TODOs
 
-1. 实现单个点光源的RSM效果
-2. 引入更多光源类型，例如spot light和direct light
-3. 实现一个类似恐怖游戏场景中包含spot light的游戏
+1. shj：修改rsm_phase1中的fluxMap, positionMap, normalMap的计算
+2. lk：负责rsm_phase2中的randomized sample
