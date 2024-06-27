@@ -94,12 +94,13 @@ namespace rsm {
         void render() {
             glEnable(GL_DEPTH_TEST);
             // glEnable(GL_CULL_FACE);
+
             // 1. first render to depth cubemap
             // ConfigureShaderAndMatrices
             GLfloat                aspect     = (GLfloat) SHADOW_WIDTH / (GLfloat) SHADOW_HEIGHT;
             GLfloat                near       = 0.1f;
             GLfloat                far        = 1000.0f;
-            glm::mat4              shadowProj = glm::perspective(90.0f, aspect, near, far);
+            glm::mat4              shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
             std::vector<glm::mat4> shadowTransforms;
             shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
             shadowTransforms.push_back(shadowProj * glm::lookAt(_pointLightPosition, _pointLightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
