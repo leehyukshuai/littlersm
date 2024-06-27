@@ -11,7 +11,6 @@
 #include <imgui/imgui.h>
 // FOR DEBUGGING
 #include <iostream>
-#include <stb_image_write.h>
 
 namespace rsm {
     class RSMApp final : public App {
