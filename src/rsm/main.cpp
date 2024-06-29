@@ -38,6 +38,8 @@ namespace rsm {
 
         std::unique_ptr<Program> _program, _depthProgram;
 
+        std::unique_ptr<Texture2D> _randomTexture;
+
         GLuint _shadowDepthFbo, _shadowDepthMap;
 
         bool _disableControl { false };
@@ -63,6 +65,8 @@ namespace rsm {
                 exit(1);
             }
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            _randomTexture = std::make_unique<Texture2D>("images/random_map.png");
 
             _scene = std::make_unique<Gltf>("cornell_box/scene.gltf");
             // _scene   = std::make_unique<Gltf>("FlightHelmet/FlightHelmet.gltf");
@@ -141,6 +145,12 @@ namespace rsm {
             glUniform3fv(glGetUniformLocation(_program->get(), "lightColor"), 1, glm::value_ptr(_pointLightColor));
             glUniform3fv(glGetUniformLocation(_program->get(), "viewPos"), 1, glm::value_ptr(_camera.getPosition()));
             glUniform1f(glGetUniformLocation(_program->get(), "far_plane"), far);
+
+
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, _randomTexture->get());
+            glUniform1i(glGetUniformLocation(_program->get(), "randomMap"), 4);
+
             for (auto & draw : _scene->draws) {
                 glUniformMatrix4fv(glGetUniformLocation(_program->get(), "model"), 1, GL_FALSE, glm::value_ptr(draw.transform));
                 for (auto & prim : _scene->meshes[draw.index]) {

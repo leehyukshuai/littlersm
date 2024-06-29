@@ -45,8 +45,72 @@ vec3 shade(vec3 lightIntensity, vec3 lightDir, vec3 normal, vec3 viewDir, vec3 d
     return diffuse + specular;
 }
 
+mat3 quad2mat3(vec4 quad) {
+    float xx = quad.x * quad.x, yy = quad.y * quad.y, zz = quad.z * quad.z, ww = quad.w * quad.w,
+        xy = quad.x * quad.y, yz = quad.y * quad.z, zw = quad.z * quad.w, 
+        xz = quad.x * quad.z, xw = quad.x * quad.w, yw = quad.y * quad.w;
+    return mat3 (
+        xx + yy - zz - ww, 2*(yz - xw), 2*(xz + yw),
+        2*(xw + yz), xx - yy + zz - ww, 2*(zw - xy),
+        2*(yw - xz), 2*(xy + zw), xx - yy - zz + ww
+    );
+}
+
+vec3 randomBiasVec(vec3 vec, float theta, int seed) {
+    vec3 ret = vec3(0.0), axis = vec3(0.0);
+    
+    vec = normalize(vec);
+
+    if (vec.x < 0.001) {
+        axis = vec3(0, vec.z, -vec.y);
+    }
+    else if (vec.y < 0.001) {
+        axis = vec3(vec.x, 0, -vec.z);
+    }
+    else {
+        axis = vec3(vec.y, -vec.x, 0);
+    }
+
+    axis = normalize(axis);
+
+    vec3 randomVec = texelFetch(randomMap, ivec2(seed, 0), 0).xyz;
+
+    // we need 2 random numbers
+    float r1 = randomVec.x, r2 = randomVec.y;
+
+    // get random axis
+    float theta1 = r1 * 6.283 * 16;
+
+    vec4 quad1 = vec4(cos(theta1 / 2), sin(theta1 / 2) * vec);
+    mat3 rotate_mat1 = quad2mat3(quad1);
+
+    axis = normalize(rotate_mat1 * axis);
+
+    // get random vector
+    theta1 = r2 * theta;
+
+    quad1 = vec4(cos(theta1 / 2), sin(theta1 / 2) * axis);
+    rotate_mat1 = quad2mat3(quad1);
+
+    ret = normalize(rotate_mat1 * vec);
+
+    return ret;
+}
+
 void main()
 {
+    // // For Debug:
+    // vec3 coord = normalize(fs_in.FragPos - lightPos);
+    // float result = 0;
+    // int sample_num = 50;
+    // for (int i = 0; i < sample_num; ++i) {
+    //     vec3 sampleCoord = randomBiasVec(coord, 0.0, i);
+    //     float depth = texture(depthMap, sampleCoord).x * 255;
+    //     result += depth;
+    // }
+    // result /= sample_num;
+    // FragColor = vec4(result, result, result, 1.0);
+
     // 1. direct lighting
     vec3 directLighting = vec3(0, 0, 0);
     vec3 color = use_base_color ? texture(base_color, fs_in.TexCoords).rgb : base_color_factor.rgb;
