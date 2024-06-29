@@ -1,4 +1,4 @@
-add_executable(littlersm main.cpp camera.h app.h)
+add_executable(littlersm main.cpp)
 
 target_link_libraries(littlersm PRIVATE common)
 
