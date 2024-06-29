@@ -63,8 +63,8 @@ namespace rsm {
             glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, _positionMap->get(), 0);
             glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, _normalMap->get(), 0);
             glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, _fluxMap->get(), 0);
-            glDrawBuffer(GL_NONE);
-            glReadBuffer(GL_NONE);
+            GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+            glDrawBuffers(3, attachments);
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
                 std::cerr << "Error: Framebuffer is not complete!" << std::endl;
                 exit(1);
@@ -114,11 +114,19 @@ namespace rsm {
             glUseProgram(_shadowProgram->get());
             for (GLuint i = 0; i < 6; ++i)
                 glUniformMatrix4fv(glGetUniformLocation(_shadowProgram->get(), ("shadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
-            glUniform1f(glGetUniformLocation(_shadowProgram->get(), "far_plane"), far);
             glUniform3fv(glGetUniformLocation(_shadowProgram->get(), "lightPos"), 1, glm::value_ptr(_pointLightPosition));
+            glUniform3fv(glGetUniformLocation(_shadowProgram->get(), "lightColor"), 1, glm::value_ptr(_pointLightColor));
+            glUniform1f(glGetUniformLocation(_shadowProgram->get(), "far_plane"), far);
             for (auto & draw : _scene->draws) {
                 glUniformMatrix4fv(glGetUniformLocation(_shadowProgram->get(), "model"), 1, GL_FALSE, glm::value_ptr(draw.transform));
                 for (auto & prim : _scene->meshes[draw.index]) {
+                    auto mat      = _scene->materials[prim.material].get();
+                    auto base_tex = _scene->textures[mat->base_color].get();
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, base_tex->get());
+                    glUniform1i(glGetUniformLocation(_shadowProgram->get(), "base_color"), 0);
+                    glUniform1i(glGetUniformLocation(_shadowProgram->get(), "use_base_color"), mat->base_color != 0);
+                    glUniform4fv(glGetUniformLocation(_shadowProgram->get(), "base_color_factor"), 1, glm::value_ptr(mat->base_color_factor));
                     prim.mesh->draw();
                 }
             }
@@ -162,9 +170,9 @@ namespace rsm {
                 for (auto & prim : _scene->meshes[draw.index]) {
                     auto mat      = _scene->materials[prim.material].get();
                     auto base_tex = _scene->textures[mat->base_color].get();
-                    glActiveTexture(GL_TEXTURE1);
+                    glActiveTexture(GL_TEXTURE5);
                     glBindTexture(GL_TEXTURE_2D, base_tex->get());
-                    glUniform1i(glGetUniformLocation(_program->get(), "base_color"), 1);
+                    glUniform1i(glGetUniformLocation(_program->get(), "base_color"), 5);
                     glUniform1i(glGetUniformLocation(_program->get(), "use_base_color"), mat->base_color != 0);
                     glUniform4fv(glGetUniformLocation(_program->get(), "base_color_factor"), 1, glm::value_ptr(mat->base_color_factor));
                     prim.mesh->draw();
