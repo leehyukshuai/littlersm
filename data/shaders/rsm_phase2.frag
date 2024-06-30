@@ -47,17 +47,15 @@ vec3 shade(vec3 lightIntensity, vec3 lightDir, vec3 normal, vec3 viewDir, vec3 d
     return diffuse + specular;
 }
 
-// vec3 randomBiasVec(vec3 vec, float sinTheta, vec2 randomVec) {
-//     vec3 vert1 = vec3(0), vert2 = vec3(0);
-//     if (vec.x < 0.001) vert1 = vec3(0, vec.z, -vec.y);
-//     else if (vec.y < 0.001) vert1 = vec3(vec.z, 0, -vec.x);
-//     else vert1 = vec3(vec.y, -vec.x, 0);
-//     vert1 = normalize(vert1);
-//     vert2 = cross(vec, vert1);
+vec3 randomBiasVec(vec3 vec, float sinTheta, vec2 randomVec) {
+    vec3 vert1 = vec3(0), vert2 = vec3(0);
+    vert1 = vec3(vec.y, -vec.x, 0) + vec3(vec.z, 0, -vec.x) + vec3(0, vec.z, -vec.y);
+    vert1 = normalize(vert1);
+    vert2 = cross(vec, vert1);
 
-//     randomVec = randomVec * 2 - vec2(1.0);
-//     return normalize(vec + sinTheta * (randomVec.x * vert1 + randomVec.y * vert2));
-// }
+    randomVec = randomVec * 2 - vec2(1.0);
+    return normalize(vec + sinTheta * (randomVec.x * vert1 + randomVec.y * vert2));
+}
 
 void main()
 {
@@ -81,8 +79,8 @@ void main()
     for (int i = 0; i < sampleNum; ++i) {
         // TODO: 修改随机采样函数，增加对于权重的处理
         vec3 r = texelFetch(randomMap, ivec2(i, 0), 0).xyz;
-        // vec3 sampleCoord = randomBiasVec(coord, sampleRange, r.xy);
-        vec3 sampleCoord = normalize(coord + (r * 2 - vec3(1)) * sampleRange);
+        vec3 sampleCoord = randomBiasVec(coord, sampleRange, r.xy);
+        // vec3 sampleCoord = normalize(coord + (r * 2 - vec3(1)) * sampleRange);
         float patchDepth = texture(depthMap, sampleCoord).x * far_plane;
         vec3 patchPosition = lightPos + patchDepth * sampleCoord;
         vec3 patchFlux = texture(fluxMap, sampleCoord).xyz;
@@ -90,7 +88,7 @@ void main()
         vec3 deltaPos = fs_in.FragPos - patchPosition;
         vec3 indirectLightDir = -normalize(deltaPos);
         vec3 indirectLightIntensity = clamp(patchFlux * max(0, dot(patchNormal, deltaPos)) * max(0, dot(normal, -deltaPos)) / pow(dot(deltaPos, deltaPos) , 2.0), vec3(0), patchFlux);
-        indirectLighting += shade(indirectLightIntensity, indirectLightDir, normal, viewDir, color, color, 64.0);
+        indirectLighting += r.z * shade(indirectLightIntensity, indirectLightDir, normal, viewDir, color, color, 64.0);
     }
     indirectLighting = clamp(indirectLighting / sampleNum, 0.0, 1.0);
     indirectLighting *= vec3(!disableIndirectLight);
