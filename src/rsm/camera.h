@@ -59,7 +59,7 @@ namespace camera {
         Sphere    sphere0 { .radius = 10 };
         glm::vec3 target0 { 0, 0, 0 };
 
-        float moveSpeed { 40 };
+        float moveSpeed { 1.0 };
         float rotateSpeed { 0.01 };
         float scrollSpeed { 1 };
         float jumpSpeed { 0.01 };
