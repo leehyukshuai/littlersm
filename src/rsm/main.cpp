@@ -23,6 +23,7 @@ namespace rsm {
             viewSphere.radius = 5.0f;
             viewSphere.theta  = PI / 2.0f;
             _camera.jump(glm::vec3(0, 1, 0), viewSphere);
+            // _camera.jump(glm::vec3(1, 1, -1), viewSphere);
             _camera.moveSpeed = 1.0f;
         }
 
@@ -31,6 +32,7 @@ namespace rsm {
         const unsigned SHADOW_SIZE = 1024;
 
         glm::vec3 _pointLightIntensity { 1, 1, 1 };
+        // glm::vec3 _pointLightPosition { 1, 1.6, -1 };
         glm::vec3 _pointLightPosition { 0, 1.6, 0 };
 
         std::unique_ptr<Gltf>        _scene;
@@ -49,6 +51,7 @@ namespace rsm {
 
     private:
         void init() override {
+            // _scene = std::make_unique<Gltf>("models/debug_scene/scene.gltf");
             _scene = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
 
             _program       = Program::create_from_files("shaders/rsm_phase2.vert", "shaders/rsm_phase2.frag");
@@ -82,6 +85,7 @@ namespace rsm {
         }
 
         void drawui() {
+            ImGui::Checkbox("Fix camera", &_disableControl);
             ImGui::Text("FPS: %.1f", 1.0f / App::getDelta());
             if (ImGui::CollapsingHeader("RSM Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::SliderFloat("Sample Range", &_sampleRange, 0.0f, 1.6f, "%.2f");
@@ -90,6 +94,10 @@ namespace rsm {
                 ImGui::SliderFloat("Indirect Factor", &_indirectLightPower, 0.0f, 4.0f, "%.2f");
                 ImGui::Checkbox("Mask Direct Light", &_disableDirectLight);
                 ImGui::Checkbox("Mask Indirect Light", &_disableIndirectLight);
+            }
+            if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderFloat3("Light Position", glm::value_ptr(_pointLightPosition), -2, 2, "%.2f");
+                ImGui::SliderFloat3("Light Intensity", glm::value_ptr(_pointLightIntensity), 0, 10, "%.2f");
             }
             if (ImGui::CollapsingHeader("Hint")) {
                 ImGui::TextWrapped(

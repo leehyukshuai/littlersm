@@ -5,8 +5,9 @@
 class App : public Application {
 protected:
     camera::Camera _camera;
-    bool           _left_button_pressed = false;
+    bool           _left_button_pressed {false};
     double         _last_xpos, _last_ypos;
+    bool           _disableControl { false };
 
 public:
     App(const char * name, int width, int height):
@@ -14,9 +15,9 @@ public:
 
 public:
     void update() override {
-        _camera.update(getDelta(), _window);
+        if (!_disableControl) _camera.update(getDelta(), _window);
     }
-    
+
 private:
     void cursor_position_callback(double xpos, double ypos) override {
         if (_left_button_pressed) {
