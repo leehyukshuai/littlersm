@@ -31,9 +31,11 @@ void main()
     // write this as modified depth
     gl_FragDepth = lightDistance;
 
-    Position = fs_in.FragPos;
+    // Position = fs_in.FragPos;
+    Position = vec3((fs_in.FragPos.x + 1.0) / 2.0, fs_in.FragPos.y / 2.0, (fs_in.FragPos.z + 1.0) / 2.0 );
 
-    Normal = fs_in.Normal;
+    // Normal = fs_in.Normal;
+    Normal = (normalize(fs_in.Normal) + vec3(1.0)) / 2.0;
 
     vec3 directLighting = vec3(0, 0, 0);
     vec3 color = use_base_color ? texture(base_color, fs_in.TexCoords).rgb : base_color_factor.rgb;
