@@ -77,10 +77,8 @@ void main()
     vec3 indirectLighting = vec3(0, 0, 0);
     vec3 coord = normalize(fs_in.FragPos - lightPos);
     for (int i = 0; i < sampleNum; ++i) {
-        // TODO: 修改随机采样函数，增加对于权重的处理
         vec3 r = texelFetch(randomMap, ivec2(i, 0), 0).xyz;
         vec3 sampleCoord = randomBiasVec(coord, sampleRange, r.xy);
-        // vec3 sampleCoord = normalize(coord + (r * 2 - vec3(1)) * sampleRange);
         float patchDepth = texture(depthMap, sampleCoord).x * far_plane;
         vec3 patchPosition = lightPos + patchDepth * sampleCoord;
         vec3 patchFlux = texture(fluxMap, sampleCoord).xyz;
