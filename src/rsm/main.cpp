@@ -27,7 +27,7 @@ namespace rsm {
 
     private:
         const unsigned SCR_WIDTH = 1600, SCR_HEIGHT = 1200;
-        const unsigned SHADOW_SIZE = 1024;
+        const unsigned SHADOW_SIZE = 512;
 
         glm::vec3 _pointLightIntensity { 1, 1, 1 };
         glm::vec3 _pointLightPosition;
