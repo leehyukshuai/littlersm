@@ -88,7 +88,7 @@ void main()
         vec3 deltaPos = fs_in.FragPos - patchPosition;
         vec3 indirectLightDir = -normalize(deltaPos);
         vec3 indirectLightIntensity = clamp(patchFlux * max(0, dot(patchNormal, deltaPos)) * max(0, dot(normal, -deltaPos)) / pow(dot(deltaPos, deltaPos) , 2.0), vec3(0), patchFlux);
-        indirectLighting += shade(indirectLightIntensity, indirectLightDir, normal, viewDir, color, color, 64.0);
+        indirectLighting += r.z * shade(indirectLightIntensity, indirectLightDir, normal, viewDir, color, color, 64.0);
     }
     indirectLighting = clamp(indirectLighting / sampleNum, 0.0, 1.0);
     indirectLighting *= vec3(!disableIndirectLight);
