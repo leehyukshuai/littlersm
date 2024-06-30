@@ -47,8 +47,8 @@ namespace rsm {
 
     private:
         void init() override {
-            _scene = std::make_unique<Gltf>("cornell_box/scene.gltf");
-            // _scene   = std::make_unique<Gltf>("FlightHelmet/FlightHelmet.gltf");
+            _scene = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
+            // _scene   = std::make_unique<Gltf>("models/FlightHelmet/FlightHelmet.gltf");
 
             _program      = Program::create_from_files("shaders/rsm_phase2.vert", "shaders/rsm_phase2.frag");
             _shadowProgram = Program::create_from_files("shaders/rsm_phase1.vert", "shaders/rsm_phase1.geom", "shaders/rsm_phase1.frag");
