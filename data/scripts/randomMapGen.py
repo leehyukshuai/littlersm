@@ -15,5 +15,5 @@ for i in range(img.width):
         e1 = random.random()
         e2 = random.random() * math.pi * 2
         pixels[i,j] = (int((e1 * math.sin(e2) + 1) / 2 * 255), int((e1 * math.cos(e2) + 1) / 2 * 255), int(e1 ** 2 * 255))
-        
-img.save('random_map.png')
+
+img.save('../images/random_map.png')
