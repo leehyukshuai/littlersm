@@ -123,7 +123,7 @@ namespace rsm {
                 ImGui::SliderFloat("Sample Range", &_sampleRange, 0.0f, 1.6f, "%.2f");
                 ImGui::SliderInt("Sample Number", &_sampleNum, 0, 600);
                 ImGui::SliderFloat("Direct Factor", &_directLightPower, 0.0f, 4.0f, "%.2f");
-                ImGui::SliderFloat("Indirect Factor", &_indirectLightPower, 0.0f, 4.0f, "%.2f");
+                ImGui::SliderFloat("Indirect Factor", &_indirectLightPower, 0.0f, 10.0f, "%.2f");
                 ImGui::Checkbox("Mask Direct Light", &_disableDirectLight);
                 ImGui::Checkbox("Mask Indirect Light", &_disableIndirectLight);
             }
