@@ -15,25 +15,24 @@
 #include <iostream>
 
 namespace rsm {
+    enum Scene { DEBUG_SCENE,
+                 CORNELL_BOX,
+                 FLIGHT_HELMET };
+    const char * sceneNames[] = { "DEBUG_SCENE", "CORNELL_BOX", "FLIGHT_HELMET" };
+
     class RSMApp final : public App {
     public:
         RSMApp():
-            App("RSM DEMO", 1600, 1200) {
-            camera::Sphere viewSphere;
-            viewSphere.radius = 5.0f;
-            viewSphere.theta  = PI / 2.0f;
-            // _camera.jump(glm::vec3(0, 1, 0), viewSphere);
-            _camera.jump(glm::vec3(1, 1, -1), viewSphere);
-            _camera.moveSpeed = 1.0f;
-        }
+            App("RSM DEMO", 1600, 1200) {}
 
     private:
         const unsigned SCR_WIDTH = 1600, SCR_HEIGHT = 1200;
         const unsigned SHADOW_SIZE = 1024;
 
         glm::vec3 _pointLightIntensity { 1, 1, 1 };
-        glm::vec3 _pointLightPosition { 1, 1.6, -1 };
-        // glm::vec3 _pointLightPosition { 0, 1.6, 0 };
+        glm::vec3 _pointLightPosition;
+
+        Scene _currentScene { Scene::DEBUG_SCENE };
 
         std::unique_ptr<Gltf>        _scene;
         std::unique_ptr<Program>     _program, _shadowProgram;
@@ -45,14 +44,13 @@ namespace rsm {
         bool  _disableIndirectLight { false };
         float _directLightPower { 1.0 };
         float _indirectLightPower { 1.3 };
-        
+
         float _sampleRange { 0.6 };
         int   _sampleNum { 20 };
 
     private:
         void init() override {
-            _scene = std::make_unique<Gltf>("models/debug_scene/scene.gltf");
-            // _scene = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
+            loadScene(_currentScene);
 
             _program       = Program::create_from_files("shaders/rsm_phase2.vert", "shaders/rsm_phase2.frag");
             _shadowProgram = Program::create_from_files("shaders/rsm_phase1.vert", "shaders/rsm_phase1.geom", "shaders/rsm_phase1.frag");
@@ -61,9 +59,9 @@ namespace rsm {
 
             _randomMap = std::make_unique<Texture2D>("images/random_map.png");
 
-            _depthMap    = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
-            _fluxMap     = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_RGB, GL_RGB);
-            _normalMap   = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_RGB, GL_RGB);
+            _depthMap  = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT);
+            _fluxMap   = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_RGB, GL_RGB);
+            _normalMap = std::make_unique<TextureCube>(SHADOW_SIZE, GL_FLOAT, GL_RGB, GL_RGB);
 
             glBindFramebuffer(GL_FRAMEBUFFER, _shadowFbo->get());
             glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _depthMap->get(), 0);
@@ -78,6 +76,34 @@ namespace rsm {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
 
+        void loadScene(Scene scene) {
+            camera::Sphere viewSphere;
+            viewSphere.radius = 5.0f;
+            viewSphere.theta  = PI / 2.0f;
+            glm::vec3 target;
+
+            switch (scene) {
+            case Scene::DEBUG_SCENE:
+                _scene              = std::make_unique<Gltf>("models/debug_scene/scene.gltf");
+                target              = glm::vec3(1, 1, -1);
+                _pointLightPosition = glm::vec3(1, 1.6, -1);
+                break;
+            case Scene::CORNELL_BOX:
+                _scene              = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
+                target              = glm::vec3(0, 1, 0);
+                _pointLightPosition = glm::vec3(0, 1.6, 0);
+                break;
+            case Scene::FLIGHT_HELMET:
+                _scene              = std::make_unique<Gltf>("models/flight_helmet/scene.gltf");
+                target              = glm::vec3(0, 0.2, 0);
+                viewSphere.radius   = 2.0f;
+                _pointLightPosition = glm::vec3(0, 1.6, 1.6);
+                break;
+            }
+
+            _camera.jump(target, viewSphere);
+        };
+
         void update() override {
             App::update();
             drawui();
@@ -87,6 +113,12 @@ namespace rsm {
         void drawui() {
             ImGui::Checkbox("Fix camera", &_disableControl);
             ImGui::Text("FPS: %.1f", 1.0f / App::getDelta());
+            int currentScene = static_cast<int>(_currentScene);
+            if (ImGui::Combo("Select Scene", &currentScene, sceneNames, IM_ARRAYSIZE(sceneNames))) {
+                _currentScene = static_cast<Scene>(currentScene);
+                loadScene(_currentScene);
+            }
+
             if (ImGui::CollapsingHeader("RSM Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::SliderFloat("Sample Range", &_sampleRange, 0.0f, 1.6f, "%.2f");
                 ImGui::SliderInt("Sample Number", &_sampleNum, 0, 600);
@@ -104,7 +136,6 @@ namespace rsm {
                     "1. `Press QWEASD` and `Drag screen` to adjust the camera view.\n"
                     "3. Reduce the `Sample Number` to improve the frame rate.");
             }
-
         }
 
         void render() {
