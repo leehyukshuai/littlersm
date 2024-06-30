@@ -31,7 +31,7 @@ namespace rsm {
         const unsigned SHADOW_SIZE = 1024;
 
         glm::vec3 _pointLightColor { 1, 1, 1 };
-        glm::vec3 _pointLightPosition { 0, 1.8, 0 };
+        glm::vec3 _pointLightPosition { 0, 1.9, 0 };
 
         std::unique_ptr<Gltf> _scene;
         std::unique_ptr<Program> _program, _shadowProgram;
@@ -40,6 +40,10 @@ namespace rsm {
         std::unique_ptr<TextureCube> _depthMap, _positionMap, _normalMap, _fluxMap;
 
         bool _disableControl { false };
+
+        bool _rsmDisableDirLight { false };
+        float _rsmSampleRange {0.5}, _rsmIndrectLightPower {1.0};
+        int _rsmSampleNum {100};
 
     private:
         void init() override {
@@ -88,6 +92,12 @@ namespace rsm {
                     "1. Use WASD+QE to move your camera.\n"
                     "2. Drag screen to rotate your front.\n"
                     "3. Disable `Camera Control` to set uniforms without moving your camera.");
+            }
+            if (ImGui::CollapsingHeader("RSM Settings")) {
+                ImGui::SliderFloat("Sample Range", &_rsmSampleRange, 0.0f, 3.0f, "%.2f");
+                ImGui::SliderInt("Sample Number", &_rsmSampleNum, 0, 600);
+                ImGui::SliderFloat("Indirect Light Power", &_rsmIndrectLightPower, 0.0f, 5.0f, "%.2f");
+                ImGui::Checkbox("Disable Direct Light", &_rsmDisableDirLight);
             }
         }
 
@@ -164,6 +174,12 @@ namespace rsm {
             glUniform3fv(glGetUniformLocation(_program->get(), "lightColor"), 1, glm::value_ptr(_pointLightColor));
             glUniform3fv(glGetUniformLocation(_program->get(), "viewPos"), 1, glm::value_ptr(_camera.getPosition()));
             glUniform1f(glGetUniformLocation(_program->get(), "far_plane"), far);
+
+            // for ImGui
+            glUniform1f(glGetUniformLocation(_program->get(), "sampleRange"), _rsmSampleRange);
+            glUniform1i(glGetUniformLocation(_program->get(), "sampleNum"), _rsmSampleNum);
+            glUniform1i(glGetUniformLocation(_program->get(), "disableDirLight"), _rsmDisableDirLight);
+            glUniform1f(glGetUniformLocation(_program->get(), "indirectLightPower"), _rsmIndrectLightPower);
 
             for (auto & draw : _scene->draws) {
                 glUniformMatrix4fv(glGetUniformLocation(_program->get(), "model"), 1, GL_FALSE, glm::value_ptr(draw.transform));
