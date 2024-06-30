@@ -22,8 +22,8 @@ namespace rsm {
             camera::Sphere viewSphere;
             viewSphere.radius = 5.0f;
             viewSphere.theta  = PI / 2.0f;
-            _camera.jump(glm::vec3(0, 1, 0), viewSphere);
-            // _camera.jump(glm::vec3(1, 1, -1), viewSphere);
+            // _camera.jump(glm::vec3(0, 1, 0), viewSphere);
+            _camera.jump(glm::vec3(1, 1, -1), viewSphere);
             _camera.moveSpeed = 1.0f;
         }
 
@@ -32,8 +32,8 @@ namespace rsm {
         const unsigned SHADOW_SIZE = 1024;
 
         glm::vec3 _pointLightIntensity { 1, 1, 1 };
-        // glm::vec3 _pointLightPosition { 1, 1.6, -1 };
-        glm::vec3 _pointLightPosition { 0, 1.6, 0 };
+        glm::vec3 _pointLightPosition { 1, 1.6, -1 };
+        // glm::vec3 _pointLightPosition { 0, 1.6, 0 };
 
         std::unique_ptr<Gltf>        _scene;
         std::unique_ptr<Program>     _program, _shadowProgram;
@@ -51,8 +51,8 @@ namespace rsm {
 
     private:
         void init() override {
-            // _scene = std::make_unique<Gltf>("models/debug_scene/scene.gltf");
-            _scene = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
+            _scene = std::make_unique<Gltf>("models/debug_scene/scene.gltf");
+            // _scene = std::make_unique<Gltf>("models/cornell_box/scene.gltf");
 
             _program       = Program::create_from_files("shaders/rsm_phase2.vert", "shaders/rsm_phase2.frag");
             _shadowProgram = Program::create_from_files("shaders/rsm_phase1.vert", "shaders/rsm_phase1.geom", "shaders/rsm_phase1.frag");
