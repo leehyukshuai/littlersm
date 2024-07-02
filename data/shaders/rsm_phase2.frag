@@ -93,4 +93,5 @@ void main()
 
     // 3. sum up
     FragColor = vec4(directLighting * directLightPower + indirectLighting * indirectLightPower, 1.0);
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
 }
